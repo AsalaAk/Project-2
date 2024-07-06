@@ -1,0 +1,239 @@
+// https://github.com/tediousjs/node-mssql#es6-tagged-template-literals
+
+
+const mssql = require('mssql')
+// require('dotenv').config()
+
+const sqlConfig = {
+    user: "SA",
+    password: "DBasala_Password",
+    database: 'VolunteeringWebDB',
+    server: 'localhost',
+    port: 1433,
+    pool: {
+        max: 10,
+        min: 0,
+        idleTimeoutMillis: 30000
+    },
+    options: {
+        encrypt: true, // for azure use true
+        trustServerCertificate: true // use true for local dev / self-signed certs
+    }
+}
+const appPool = new mssql.ConnectionPool(sqlConfig)
+
+
+/*
+const getCustomers = async (req, theId) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let myConnectionPoolToDB = await appPool.connect()
+            try {
+                let results = await myConnectionPoolToDB.query(`select * from Customers`)//where id = ? OR id = ?`, (theId, theId + 2))
+                console.log(results);
+                resolve(results);
+            }
+            catch (err) {
+                console.log("there was an error while sending query to DB ", err);
+                reject(err);
+            }
+        }
+        catch (err) {
+            console.error('ERROR CONNECTION TO DB: ', err);
+            reject('ERROR CONNECTION TO DB: ', err);
+        }
+    })
+}
+
+module.exports.getCustomers = getCustomers;
+*/
+
+
+//============================================================================
+// stored proc
+/*
+assuming the stored proc was defined on SQLServer like so:
+//-----------------------------------
+CREATE PROCEDURE [dbo].[spHowManyOrdersPerCustomerBetween_Date1_Date2]
+@StartDate DATETIME,
+@EndDate DATETIME
+as
+begin
+    SELECT COUNT(id)
+    FROM Orders
+    WHERE orderDate BETWEEN @StartDate AND @EndDate
+    GROUP BY customerId
+end
+GO
+
+//-----------------------------------
+and we can run it on SSMS like so:
+
+exec spHowManyOrdersPerCustomerBetween_Date1_Date2 '2022-02-01','2022-02-05'
+*/
+
+
+/* 
+Types:
+
+JS Data Type To SQL Data Type Map
+
+Number -> sql.Int
+String -> sql.NVarChar
+Boolean -> sql.Bit
+Date -> sql.DateTime
+Buffer -> sql.VarBinary
+sql.Table -> sql.TVP
+
+*/
+
+// read here more:
+//  https://www.npmjs.com/package/mssql#execute-procedure-callback
+//=====================================================================
+
+// for the project only use stored prosedure 
+
+
+// ------------------------GET 1-----------------------
+
+const getAllApplicants = async (req, theId) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let myConnectionPoolToDB = await appPool.connect()
+            try {
+                let results = await myConnectionPoolToDB.request()
+                    // .input('StartDate', sql.DateTime, value)
+                    // .input('EndDate', sql.DateTime, value)
+                    // .output('output_parameter', sql.VarChar(50))
+                    .execute('spGetAllApplicatns')
+
+                console.log(results);
+                resolve(results);
+            }
+            catch (err) {
+                console.log("there was an error while sending query to DB ", err);
+                reject(err);
+            }
+        }
+        catch (err) {
+            console.error('ERROR CONNECTION TO DB: ', err);
+            reject('ERROR CONNECTION TO DB: ', err);
+        }
+    })
+}
+
+module.exports.getAllApplicants = getAllApplicants;
+
+
+// ------------------------GET 2-----------------------
+
+const getUsersWhoApplied = async (req, theId) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let myConnectionPoolToDB = await appPool.connect()
+            try {
+                let results = await myConnectionPoolToDB.request()
+                    // .input('StartDate', sql.DateTime, value)
+                    // .input('EndDate', sql.DateTime, value)
+                    // .output('output_parameter', sql.VarChar(50))
+                    .execute('spGetUsersWhoApplied')
+
+                console.log(results);
+                resolve(results);
+            }
+            catch (err) {
+                console.log("there was an error while sending query to DB ", err);
+                reject(err);
+            }
+        }
+        catch (err) {
+            console.error('ERROR CONNECTION TO DB: ', err);
+            reject('ERROR CONNECTION TO DB: ', err);
+        }
+    })
+}
+
+module.exports.getUsersWhoApplied = getUsersWhoApplied;
+
+// ------------------------POST------------------------
+
+
+const AddPlaceUsingStoredProcedure = async (place_name) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let myConnectionPoolToDB = await appPool.connect()
+            try {
+                let results = await myConnectionPoolToDB.request()
+                    .input('place_name', mssql.NVarChar, place_name)
+                    .execute('spAddNewVolunteeringPlace')
+
+                console.log(results);
+                resolve(results);
+            }
+            catch (err) {
+                console.log("there was an error while sending query to DB ", err);
+                reject(err);
+            }
+        }
+        catch (err) {
+            console.error('ERROR CONNECTION TO DB: ', err);
+            reject('ERROR CONNECTION TO DB: ', err);
+        }
+    })
+}
+
+module.exports.AddPlaceUsingStoredProcedure = AddPlaceUsingStoredProcedure;
+
+
+
+// ------------------------DELETE-----------------------
+
+
+// const deleteUser = async (id) => {
+//     return new Promise(async (resolve, reject) => {
+//         try {
+//             let myConnectionPoolToDB = await appPool.connect()
+//             try {
+//                 let results = await myConnectionPoolToDB.request()
+//                     .input('id', mssql.Int, id)
+//                     .execute('spDeleteUser')
+
+//                 console.log(results);
+//                 resolve(results);
+//             }
+//             catch (err) {
+//                 console.log("there was an error while sending query to DB ", err);
+//                 reject(err);
+//             }
+//         }
+//         catch (err) {
+//             console.error('ERROR CONNECTION TO DB: ', err);
+//             reject('ERROR CONNECTION TO DB: ', err);
+//         }
+//     })
+// }
+
+// module.exports.deleteUser = deleteUser;
+
+
+
+
+
+// Function to delete a user by ID
+// const deleteUser = async (id) => {
+//     try {
+//         const pool = await appPool;
+//         const request = new Request(pool);
+
+//         request.input('id', mssql.Int, id); // Add the input parameter 'id' to the request
+
+//         const result = await request.execute('spDeleteUser'); // Execute the stored procedure
+
+//         return result.recordset; // Return the recordset if needed
+//     } catch (err) {
+//         console.error('SQL error', err);
+//         throw err;
+//     }
+// };
+
+// module.exports.deleteUser = deleteUser;
